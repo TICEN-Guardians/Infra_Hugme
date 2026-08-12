@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg17
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -18,42 +18,36 @@ services:
     networks:
       - hugme-network
 
+  paradedb:
+    image: paradedb/paradedb:0.24.3-pg17
+    environment:
+      POSTGRES_USER: ${PARADEDB_USER}
+      POSTGRES_PASSWORD: ${PARADEDB_PASSWORD}
+      POSTGRES_DB: ${PARADEDB_DB}
+    volumes:
+      - paradedb-data:/var/lib/postgresql/data
+    networks:
+      - hugme-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.4
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: 'false'
+      ES_JAVA_OPTS: '-Xms1g -Xmx1g'
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - hugme-network
+
   ai:
     build:
       context: ../AI_Hugme
       dockerfile: Dockerfile
-    command:
-      [
-        'sh',
-        '-c',
-        'python scripts/make_dummy_model.py && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload',
-      ]
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      AWS_REGION: ${AWS_REGION}
-      S3_BUCKET: ${S3_BUCKET}
-      S3_MODEL_KEY: ${S3_MODEL_KEY}
-      MODEL_LOCAL_PATH: ${MODEL_LOCAL_PATH}
-      FORCE_DOWNLOAD: ${FORCE_DOWNLOAD}
     ports:
       - '${AI_HOST_PORT}:8000'
-    volumes:
-      - ../AI_Hugme/app:/app/app
-      - ../AI_Hugme/scripts:/app/scripts
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'python',
-          '-c',
-          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+    environment:
+      AWS_REGION: ${AWS_REGION}
     networks:
       - hugme-network
 
@@ -69,17 +63,28 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       AI_BASE_URL: ${AI_BASE_URL}
       CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN}
-      ELASTICSEARCH_URI: ${ELASTICSEARCH_URI}
-      ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME}
-      ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       SPRING_AI_OPENAI_API_KEY: ${OPENAI_API_KEY}
       JWT_SECRET: ${JWT_SECRET}
+      ELASTICSEARCH_URI: ${ELASTICSEARCH_URI}
+      ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME}
+      ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      PARADEDB_USER: ${PARADEDB_USER}
+      PARADEDB_PASSWORD: ${PARADEDB_PASSWORD}
+      PARADEDB_DB: ${PARADEDB_DB}
     ports:
       - '${BACKEND_HOST_PORT}:8080'
     depends_on:
       postgres:
         condition: service_healthy
+      paradedb:
+        condition: service_started
+      elasticsearch:
+        condition: service_started
     networks:
       - hugme-network
 
@@ -89,3 +94,5 @@ networks:
 
 volumes:
   postgres-data:
+  paradedb-data:
+  elasticsearch-data:
