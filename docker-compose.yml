@@ -80,6 +80,8 @@ services:
       CHATBOT_POSTGRES_PASSWORD: ${CHATBOT_POSTGRES_PASSWORD}
     ports:
       - '${BACKEND_HOST_PORT}:8080'
+    volumes:
+      - ../Backend_Hugme/src/main/resources/models/bge-m3:/app/src/main/resources/models/bge-m3:ro
     depends_on:
       postgres:
         condition: service_healthy
