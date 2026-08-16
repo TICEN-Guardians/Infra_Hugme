@@ -52,6 +52,8 @@ services:
       - '${AI_HOST_PORT}:8000'
     environment:
       AWS_REGION: ${AWS_REGION}
+      BUILDING_LEDGER_API_KEY: ${BUILDING_LEDGER_API_KEY}
+      BUILDING_LEDGER_API_TIMEOUT: ${BUILDING_LEDGER_API_TIMEOUT}
     networks:
       - hugme-network
 
