@@ -64,9 +64,12 @@ services:
       MODEL_S3_BUCKET: ${MODEL_S3_BUCKET}
       MODEL_MANIFEST_KEY: ${MODEL_MANIFEST_KEY}
       MODEL_CACHE_DIR: ${MODEL_CACHE_DIR}
+      DIAGNOSIS_MODEL_PREFETCH: ${DIAGNOSIS_MODEL_PREFETCH}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+    volumes:
+      - ai-models:${MODEL_CACHE_DIR}
     networks:
       - hugme-network
 
@@ -119,3 +122,4 @@ volumes:
   postgres-data:
   paradedb-data:
   elasticsearch-data:
+  ai-models:
