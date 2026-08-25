@@ -10,22 +10,17 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
-      interval: 5s
-      timeout: 5s
-      retries: 10
     networks:
       - hugme-network
 
   paradedb:
     image: paradedb/paradedb:0.24.3-pg17
     environment:
+      POSTGRES_DB: ${CHATBOT_POSTGRES_DB}
       POSTGRES_USER: ${CHATBOT_POSTGRES_USER}
       POSTGRES_PASSWORD: ${CHATBOT_POSTGRES_PASSWORD}
-      POSTGRES_DB: ${CHATBOT_POSTGRES_DB}
     ports:
-      - '5433:5432'
+      - '${CHATBOT_POSTGRES_HOST_PORT}:5432'
     volumes:
       - paradedb-data:/var/lib/postgresql/data
     networks:
@@ -38,86 +33,29 @@ services:
       xpack.security.enabled: 'false'
       ES_JAVA_OPTS: '-Xms1g -Xmx1g'
     ports:
-      - '9200:9200'
+      - '${ELASTICSEARCH_HOST_PORT}:9200'
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     networks:
       - hugme-network
 
-  ai:
-    build:
-      context: ../AI_Hugme
-      dockerfile: Dockerfile
-    ports:
-      - '${AI_HOST_PORT}:8000'
-    environment:
-      AWS_REGION: ${AWS_REGION}
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      BUILDING_LEDGER_API_KEY: ${BUILDING_LEDGER_API_KEY}
-      BUILDING_LEDGER_API_TIMEOUT: ${BUILDING_LEDGER_API_TIMEOUT}
-      RTMS_APARTMENT_API_KEY: ${RTMS_APARTMENT_API_KEY}
-      RTMS_VILLA_API_KEY: ${RTMS_VILLA_API_KEY}
-      RTMS_OFFICETEL_API_KEY: ${RTMS_OFFICETEL_API_KEY}
-      RTMS_DETACHED_MULTI_API_KEY: ${RTMS_DETACHED_MULTI_API_KEY}
-      RTMS_API_TIMEOUT: ${RTMS_API_TIMEOUT:-10}
-      ADDRESS_API_CONFIRMATION_KEY: ${ADDRESS_API_CONFIRMATION_KEY}
-      ADDRESS_API_TIMEOUT: ${ADDRESS_API_TIMEOUT}
-      MODEL_S3_BUCKET: ${MODEL_S3_BUCKET}
-      MODEL_MANIFEST_KEY: ${MODEL_MANIFEST_KEY}
-      MODEL_CACHE_DIR: ${MODEL_CACHE_DIR}
-      DIAGNOSIS_MODEL_PREFETCH: ${DIAGNOSIS_MODEL_PREFETCH}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-    volumes:
-      - ai-models:${MODEL_CACHE_DIR}
-    networks:
-      - hugme-network
-
   backend:
+    profiles:
+      - app
     build:
       context: ../Backend_Hugme
       dockerfile: Dockerfile
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      SPRING_FLYWAY_OUT_OF_ORDER: ${SPRING_FLYWAY_OUT_OF_ORDER:-false}
-      AI_BASE_URL: http://ai:8000
-      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      SPRING_AI_OPENAI_API_KEY: ${OPENAI_API_KEY}
-      JWT_SECRET: ${JWT_SECRET}
-      ADDRESS_ENCRYPTION_KEY: ${ADDRESS_ENCRYPTION_KEY}
-      ELASTICSEARCH_URI: http://elasticsearch:9200
-      ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME}
-      ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD}
-      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
-      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      CHATBOT_POSTGRES_HOST: paradedb
-      CHATBOT_POSTGRES_PORT: 5432
-      CHATBOT_POSTGRES_DB: ${CHATBOT_POSTGRES_DB}
-      CHATBOT_POSTGRES_USER: ${CHATBOT_POSTGRES_USER}
-      CHATBOT_POSTGRES_PASSWORD: ${CHATBOT_POSTGRES_PASSWORD}
-    ports:
-      - '${BACKEND_HOST_PORT}:8080'
-    volumes:
-      - ../Backend_Hugme/src/main/resources/models/bge-m3:/app/src/main/resources/models/bge-m3:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-      paradedb:
-        condition: service_started
-      elasticsearch:
-        condition: service_started
+    image: hugme-local-backend
+    networks:
+      - hugme-network
+
+  ai:
+    profiles:
+      - app
+    build:
+      context: ../AI_Hugme
+      dockerfile: Dockerfile
+    image: hugme-local-ai
     networks:
       - hugme-network
 
